@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciamento de Frota</title>
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+        
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .header-container h1 { font-size: 20px; margin: 0; color: #1a252f; display: flex; align-items: center; gap: 8px; }
+        
+        .btn-settings {
+            background: #f0f2f5;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #4a5568;
+        }
+        .btn-settings:hover { background: #e2e8f0; transform: rotate(45deg); color: #2d3748; }
+        .btn-settings svg { width: 24px; height: 24px; fill: currentColor; }
+
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card h2 { font-size: 16px; margin-top: 0; margin-bottom: 15px; color: #2c3e50; border-bottom: 2px solid #edf2f7; padding-bottom: 8px; }
+        
+        label { display: block; margin-top: 12px; font-weight: 600; font-size: 14px; color: #4a5568; }
+        input, select, button { width: 100%; padding: 12px; margin-top: 6px; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 15px; outline: none; }
+        input:focus, select:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+        
+        button { background-color: #3182ce; color: white; font-weight: bold; border: none; cursor: pointer; transition: background 0.2s; }
+        button:active { transform: scale(0.98); }
+        .btn-green { background-color: #38a169; }
+        .btn-green:hover { background-color: #2f855a; }
+        .btn-red { background-color: #e53e3e; }
+        
+        .checklist-group { margin-top: 15px; background: #f7fafc; padding: 12px; border-radius: 8px; border: 1px solid #edf2f7; }
+        .checklist-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 14px; }
+        .checklist-item:last-child { margin-bottom: 0; }
+        .checklist-item input { width: 20px; height: 20px; margin: 0; cursor: pointer; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(3px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 480px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; }
+        .modal-header h2 { margin: 0; border: none; padding: 0; }
+        .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #a0aec0; width: auto; padding: 0; margin: 0; }
+
+        .sheet-box {
+            background: #f7fafc;
+            border: 2px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+        .btn-sheet-link {
+            background-color: #2b6cb0;
+            color: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .list-container { margin-top: 15px; max-height: 120px; overflow-y: auto; border: 1px solid #edf2f7; border-radius: 6px; padding: 5px; }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #f8fafc; margin-bottom: 4px; border-radius: 4px; font-size: 13px; }
+        .btn-del { width: auto; padding: 2px 8px; margin: 0; font-size: 11px; background: #feb2b2; color: #9b2c2c; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>🚗 Gestão de Frota</h1>
+        <button class="btn-settings" onclick="toggleModal(true)" title="Configurações e Cadastros">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="card">
+        <h2>📋 Check-in / Check-out do Veículo</h2>
+        
+        <label>Tipo de Operação:</label>
+        <select id="tipoAcao">
+            <option value="Abertura">🟢 Abrir Veículo (Início de Turno)</option>
+            <option value="Fechamento">🔴 Fechar Veículo (Fim de Turno)</option>
+        </select>
+
+        <label>Motorista:</label>
+        <select id="selectMotorista"><option value="">Selecione na lista...</option></select>
+
+        <label>Veículo:</label>
+        <select id="selectVeiculo"><option value="">Selecione na lista...</option></select>
+
+        <label>Quilometragem Atual (KM):</label>
+        <input type="number" id="kmVeiculo" placeholder="Ex: 45200">
+
+        <label>Checklist do Veículo:</label>
+        <div class="checklist-group">
+            <div class="checklist-item"><span>🛢️ Nível do Óleo & Água</span> <input type="checkbox" id="chkOleo"></div>
+            <div class="checklist-item"><span>🛞 Pneus e Calibragem</span> <input type="checkbox" id="chkPneus"></div>
+            <div class="checklist-item"><span>💡 Iluminação & Faróis</span> <input type="checkbox" id="chkLuzes"></div>
+            <div class="checklist-item"><span>🚗 Lataria (Sem novos riscos)</span> <input type="checkbox" id="chkLataria"></div>
+            <div class="checklist-item"><span>🧹 Limpeza Interna</span> <input type="checkbox" id="chkLimpeza"></div>
+        </div>
+
+        <button class="btn-green" id="btnSalvar" onclick="registrarOperacao()">✅ Enviar para Planilha Google</button>
+    </div>
+
+    <div class="card">
+        <h2>📊 Planilha em Tempo Real</h2>
+        <div class="sheet-box">
+            <a href="https://docs.google.com/spreadsheets/d/1Ik-XRZyY_ugRnIyvqvDLYddNLDVkIAxSBXDXwPVrA0c/edit?usp=sharing" target="_blank" class="btn-sheet-link">
+                🔗 Abrir Planilha no Google Drive
+            </a>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalCadastros">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Painel de Cadastros</h2>
+                <button class="close-btn" onclick="toggleModal(false)">&times;</button>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label>👤 Cadastrar Motorista:</label>
+                <input type="text" id="cadMotorista" placeholder="Nome Completo">
+                <button onclick="cadastrarMotorista()" style="margin-top: 8px;">Adicionar Motorista</button>
+                <div class="list-container" id="listaMotoristas"></div>
+            </div>
+
+            <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 15px 0;">
+
+            <div>
+                <label>🚘 Cadastrar Veículo:</label>
+                <input type="text" id="cadVeiculo" placeholder="Placa / Modelo">
+                <button onclick="cadastrarVeiculo()" style="margin-top: 8px;">Adicionar Veículo</button>
+                <div class="list-container" id="listaVeiculos"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ENDEREÇO DA SUA API DO GOOGLE APPS SCRIPT
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJXzljDeCoXhMgSH8_tTThRVjrVG7vDq2XhNMO-O6NQAFEKP92Ho-_f5x6_PWuusIj/exec";
+
+        let motoristas = JSON.parse(localStorage.getItem('frota_motoristas')) || [];
+        let veiculos = JSON.parse(localStorage.getItem('frota_veiculos')) || [];
+
+        window.onload = function() {
+            atualizarInterface();
+        };
+
+        function toggleModal(show) {
+            document.getElementById('modalCadastros').classList.toggle('active', show);
+        }
+
+        function cadastrarMotorista() {
+            let nome = document.getElementById('cadMotorista').value.trim();
+            if(nome) {
+                motoristas.push(nome);
+                localStorage.setItem('frota_motoristas', JSON.stringify(motoristas));
+                document.getElementById('cadMotorista').value = '';
+                atualizarInterface();
+            }
+        }
+
+        function cadastrarVeiculo() {
+            let veiculo = document.getElementById('cadVeiculo').value.trim();
+            if(veiculo) {
+                veiculos.push(veiculo);
+                localStorage.setItem('frota_veiculos', JSON.stringify(veiculos));
+                document.getElementById('cadVeiculo').value = '';
+                atualizarInterface();
+            }
+        }
+
+        function removerMotorista(index) {
+            motoristas.splice(index, 1);
+            localStorage.setItem('frota_motoristas', JSON.stringify(motoristas));
+            atualizarInterface();
+        }
+
+        function removerVeiculo(index) {
+            veiculos.splice(index, 1);
+            localStorage.setItem('frota_veiculos', JSON.stringify(veiculos));
+            atualizarInterface();
+        }
+
+        function atualizarInterface() {
+            let sMot = document.getElementById('selectMotorista');
+            let sVei = document.getElementById('selectVeiculo');
+            
+            sMot.innerHTML = '<option value="">Selecione na lista...</option>';
+            sVei.innerHTML = '<option value="">Selecione na lista...</option>';
+
+            motoristas.forEach(m => sMot.innerHTML += `<option value="${m}">${m}</option>`);
+            veiculos.forEach(v => sVei.innerHTML += `<option value="${v}">${v}</option>`);
+
+            let lMot = document.getElementById('listaMotoristas');
+            let lVei = document.getElementById('listaVeiculos');
+            
+            lMot.innerHTML = motoristas.length === 0 ? '<small style="color:#a0aec0">Nenhum motorista</small>' : '';
+            motoristas.forEach((m, idx) => {
+                lMot.innerHTML += `<div class="list-item"><span>${m}</span><button class="btn-del" onclick="removerMotorista(${idx})">Excluir</button></div>`;
+            });
+
+            lVei.innerHTML = veiculos.length === 0 ? '<small style="color:#a0aec0">Nenhum veículo</small>' : '';
+            veiculos.forEach((v, idx) => {
+                lVei.innerHTML += `<div class="list-item"><span>${v}</span><button class="btn-del" onclick="removerVeiculo(${idx})">Excluir</button></div>`;
+            });
+        }
+
+        async function registrarOperacao() {
+            let acao = document.getElementById('tipoAcao').value;
+            let motorista = document.getElementById('selectMotorista').value;
+            let veiculo = document.getElementById('selectVeiculo').value;
+            let km = document.getElementById('kmVeiculo').value;
+            let btn = document.getElementById('btnSalvar');
+
+            if(!motorista || !veiculo || !km) {
+                alert('⚠️ Preencha o motorista, veículo e KM!');
+                return;
+            }
+
+            if(GOOGLE_SCRIPT_URL === "COLE_AQUI_O_SEU_URL_DO_APPS_SCRIPT") {
+                alert("⚠️ Adicione a URL do Apps Script no código HTML antes de enviar!");
+                return;
+            }
+
+            let payload = {
+                data: new Date().toLocaleString('pt-BR'),
+                acao: acao,
+                motorista: motorista,
+                veiculo: veiculo,
+                km: km,
+                oleo: document.getElementById('chkOleo').checked ? 'OK' : 'NOK',
+                pneus: document.getElementById('chkPneus').checked ? 'OK' : 'NOK',
+                luzes: document.getElementById('chkLuzes').checked ? 'OK' : 'NOK',
+                lataria: document.getElementById('chkLataria').checked ? 'OK' : 'NOK',
+                limpeza: document.getElementById('chkLimpeza').checked ? 'OK' : 'NOK'
+            };
+
+            btn.disabled = true;
+            btn.innerText = "⏳ Enviando para o Google...";
+
+            try {
+                // Envio dos dados para o Google Sheets via HTTP POST
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                alert(`✅ Registro enviado com sucesso para a planilha do Google!`);
+                
+                // Limpa o formulário
+                document.getElementById('kmVeiculo').value = '';
+                document.querySelectorAll('.checklist-group input').forEach(c => c.checked = false);
+
+            } catch (err) {
+                alert("❌ Erro ao enviar os dados. Verifique sua conexão.");
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "✅ Enviar para Planilha Google";
+            }
+        }
+    </script>
+</body>
+</html>
